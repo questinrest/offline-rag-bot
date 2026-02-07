@@ -27,9 +27,9 @@ st.title("📄 Legal RAG Assistant (Ollama)")
 # ---------------------------
 # Sidebar – Ingestion controls
 # ---------------------------
-st.sidebar.header("Choose Vector Store or Create One")
+#st.sidebar.header("Choose Vector Store or Create One")
 
-COLLECTION_NAME = st.sidebar.chat_input("Your collection name")
+#COLLECTION_NAME = st.sidebar.chat_input("Your collection name")
 
 st.sidebar.header("Ingestion")
 
