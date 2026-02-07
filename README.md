@@ -33,7 +33,7 @@ pip install -r requirements.txt
 ```sh
 streamlit app.py
 ```
-- Typical steps:
+
   0. Open CMD and run "Ollama Serve" (make sure to pull models before serving (i have used gemma3:1b and gemma3:270m)).
   1. Documents provided in the docs folder, use them to run ingestion in the streamlit interface by selecting chunk_size and chunk_overlap.
   2. After Ingestion, select top_k and and temperature appropriately for querying in the bar to ask question. 
