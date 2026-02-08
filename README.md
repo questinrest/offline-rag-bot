@@ -144,109 +144,92 @@ Tested models include:
 
 ---
 
+# Offline RAG Bot
+
+An offline Retrieval-Augmented Generation (RAG) chatbot built with **Streamlit** and **Ollama**, supporting persistent embeddings and multiple document formats.
+
+---
+
 ## Installation
 
 ### 1. Clone the Repository
 ```sh
 git clone <your-repo-url>
 cd offline-rag-bot
-
-
-### 2. Create a Virtual Environment
-#### Windows
-```sh
+2. Create a Virtual Environment
+Windows
 py -3.11 -m venv .venv
 .venv\Scripts\activate
-
-#### macOS / Linux
-```sh
+macOS / Linux
 python3.11 -m venv .venv
 source .venv/bin/activate
-
-### 3. Install Dependencies
-```sh
+3. Install Dependencies
 pip install -r requirements.txt
+4. Install Ollama
+Download and install Ollama
+https://ollama.com
 
-### 4. Install Ollama
-
-#### Download and install Ollama
-
-#### Pull at least one model:
-```sh
+Pull at least one model:
 ollama pull gemma3:270m
 ollama pull gemma3:1b
 ollama pull gemma3:4b
+Running the Application
+1. Start Ollama
+Open a new terminal / CMD and run:
 
-#### Running the Application
-#### 1. Start Ollama
+ollama serve
+2. Run the Streamlit App
+In another terminal (with the virtual environment activated):
 
-##### Open a new terminal / CMD and run:
-
-##### ollama serve
-
-####2. Run the Streamlit App
-#####In another terminal (with the virtual environment activated):
-```sh
 streamlit run app.py
+Using the App
+Step 1: Ingest Documents
+Place documents inside the docs/ folder
 
-##### Using the App
-##### Step 1: Ingest Documents
+In the Streamlit UI:
 
-##### Place documents inside the docs/ folder
+Select document type (PDF or TXT)
 
-#### In the Streamlit UI:
+Choose chunk_size and chunk_overlap
 
-##### Select document type (PDF or TXT)
+Click Ingest
 
-##### Choose chunk_size and chunk_overlap
+Embeddings are stored persistently, so ingestion does not need to be repeated every run.
 
-##### Click Ingest
+Step 2: Configure Query Settings
+Select an LLM from the dropdown
 
-##### Embeddings are stored persistently, so ingestion does not need to be repeated every run.
+Configure:
 
-##### Step 2: Configure Query Settings
+top_k (number of retrieved chunks)
 
-##### Select an LLM from the dropdown
+temperature
 
-##### Choose:
+To use a new Ollama model, add it to the model list in app.py:
 
-##### top_k (number of retrieved chunks)
-
-##### temperature
-
-#####To use a new Ollama model, add it to the model list in:
-```sh
 model_name = st.sidebar.selectbox(...)
-inside app.py.
+Step 3: Ask Questions
+Type your query in the input box
 
-#### Step 3: Ask Questions
+Press Enter
 
-##### Type your query in the input box
+The app returns:
 
-##### Press Enter
+Generated answer
 
-###### The app returns:
+Retrieved document chunks
 
-###### Generated answer
+Similarity scores
 
-###### Retrieved document chunks
+Key Features
+Fully offline RAG pipeline
 
-###### Similarity scores
+Persistent vector database
 
+Multiple document ingestion options
 
-### Key Features
+Configurable chunking and retrieval
 
-#### Fully offline RAG pipeline
+Easy LLM swapping via Ollama
 
-#### Persistent vector database
-
-####  Multiple document ingestion options
-
-#### Configurable chunking and retrieval
-
-####  Easy LLM swapping via Ollama
-
-#### Modular and extensible codebase
-
-
-
+Modular and extensible codebase
