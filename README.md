@@ -150,40 +150,62 @@ An offline Retrieval-Augmented Generation (RAG) chatbot built with **Streamlit**
 
 ---
 
-## Installation
+## How to Run?
 
 ### 1. Clone the Repository
+
 ```sh
 git clone <your-repo-url>
 cd offline-rag-bot
-2. Create a Virtual Environment
+```
+
+### 2. Create and Activate enviroment
+
 Windows
+```sh
 py -3.11 -m venv .venv
 .venv\Scripts\activate
+```
+
 macOS / Linux
+```sh
 python3.11 -m venv .venv
 source .venv/bin/activate
-3. Install Dependencies
+```
+
+### 3. Install Dependencies
+```sh
 pip install -r requirements.txt
-4. Install Ollama
+```
+
+### 4. Install Ollama
+
 Download and install Ollama
 https://ollama.com
 
+```sh
 Pull at least one model:
 ollama pull gemma3:270m
 ollama pull gemma3:1b
 ollama pull gemma3:4b
-Running the Application
-1. Start Ollama
+```
+
+### Running the Application
+#### 1. Start Ollama
 Open a new terminal / CMD and run:
-
+```sh
 ollama serve
-2. Run the Streamlit App
-In another terminal (with the virtual environment activated):
+```
 
+#### 2. Run the Streamlit App
+In another terminal (with the virtual environment activated):
+```sh
 streamlit run app.py
-Using the App
-Step 1: Ingest Documents
+```
+
+### Using the App
+
+#### Step 1: Ingest Documents
 Place documents inside the docs/ folder
 
 In the Streamlit UI:
@@ -196,7 +218,7 @@ Click Ingest
 
 Embeddings are stored persistently, so ingestion does not need to be repeated every run.
 
-Step 2: Configure Query Settings
+#### Step 2: Configure Query Settings
 Select an LLM from the dropdown
 
 Configure:
@@ -206,9 +228,11 @@ top_k (number of retrieved chunks)
 temperature
 
 To use a new Ollama model, add it to the model list in app.py:
-
+```sh
 model_name = st.sidebar.selectbox(...)
-Step 3: Ask Questions
+```
+
+#### Step 3: Ask Questions
 Type your query in the input box
 
 Press Enter
@@ -220,16 +244,3 @@ Generated answer
 Retrieved document chunks
 
 Similarity scores
-
-Key Features
-Fully offline RAG pipeline
-
-Persistent vector database
-
-Multiple document ingestion options
-
-Configurable chunking and retrieval
-
-Easy LLM swapping via Ollama
-
-Modular and extensible codebase
