@@ -12,4 +12,3 @@ torch
 langchain-ollama
 pathlib
 streamlit
-python-dotenv

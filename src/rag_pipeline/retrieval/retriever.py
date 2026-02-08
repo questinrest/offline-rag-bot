@@ -10,7 +10,7 @@ class Retriever:
         self.store = store
         self.top_k = top_k
 
-    def retrieve(self, question, filters):
+    def retrieve(self, question, filters = None):
         """
         returns:
         [

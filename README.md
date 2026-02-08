@@ -1,45 +1,252 @@
 # offline-rag-bot
 
-A lightweight offline RAG (Retrieval-Augmented Generation) pipeline for local/document-based QA and experimentation.
+A **lightweight, fully offline Retrieval-Augmented Generation (RAG) pipeline** for local document-based question answering and experimentation using **local embeddings, a persistent vector store, and locally served LLMs via Ollama**.
+
+This project is designed to be **simple, modular, and hackable**, making it ideal for learning RAG internals or quickly testing different models and chunking strategies.
+
+---
 
 ## Architecture
-- Entry: [app.py](app.py)
-- Ingestion: document loading and splitting via [`rag_pipeline.ingestion.chunker`](src/rag_pipeline/ingestion/chunker.py) and [`rag_pipeline.ingestion.document_loader`](src/rag_pipeline/ingestion/document_loader.py).
-- Embedding: embedding creation handled by [`rag_pipeline.embedding.embedding`](src/rag_pipeline/embedding/embedding.py).
-- Vector store: persistent vector index (see [src/rag_pipeline/vectorstore](src/rag_pipeline/vectorstore)).
-- Retrieval: nearest-neighbor retrieval and scoring (see [src/rag_pipeline/retrieval](src/rag_pipeline/retrieval)).
-- Generation: response generation & prompt orchestration in [`rag_pipeline.generation.generator`](src/rag_pipeline/generation/generator.py).
 
-Data flow: documents -> loader -> [`chunker`](src/rag_pipeline/ingestion/chunker.py) -> embeddings (`embedding.py`) -> vectorstore -> retrieval -> generator -> streamlit app (`app.py`).
+### High-Level RAG Flow
 
-## Models used
-- Embeddings: sentence-transformers (see [requirements.txt](requirements.txt)), e.g., all-MiniLM variant for compact/high-speed embeddings.
-- Generation: local/hosted LLMs via Ollama integrations (see [llm/](llm/) and [requirements.txt](requirements.txt)).
-- Adjust model choices in the pipeline modules above to swap embeddings or LLMs.
+Documents → Loader → Chunker → Embeddings → Vector Store → Retrieval → LLM → Streamlit UI
 
-## Install
+
+The pipeline follows the standard **Retrieval-Augmented Generation (RAG)** workflow:
+
+1. Load documents (PDF / TXT)
+2. Split documents into chunks
+3. Embed chunks into vector representations
+4. Store embeddings in a persistent vector database
+5. Retrieve relevant chunks for a user query
+6. Generate an answer using an LLM with retrieved context
+
+---
+
+### Components Overview
+
+#### 1. Document Ingestion
+- Custom **PDF and TXT extractors**
+- Supports:
+  - Single file
+  - Multiple files
+  - Entire folder ingestion
+- Converts extracted content into **LangChain `Document` objects**
+
+Relevant modules:
+- `rag_pipeline.ingestion.document_loader`
+- `rag_pipeline.ingestion.chunker`
+
+---
+
+#### 2. Chunking Strategy
+- Uses **recursive text splitting**
+- User-configurable:
+  - `chunk_size`
+  - `chunk_overlap`
+- Chunking parameters can be selected directly from the Streamlit UI
+- Enables experimentation with different chunking combinations
+
+---
+
+#### 3. Embedding Layer
+- Converts text chunks into dense vector embeddings
+- Embeddings are generated locally using Sentence Transformers
+
+Module:
+- `rag_pipeline.embedding.embedding`
+
+---
+
+#### 4. Vector Store
+- Uses **ChromaDB**
+- Features:
+  - Persistent on-disk storage (not in-memory)
+  - **HNSW indexing**
+  - **Cosine similarity** search
+- Stored embeddings are reused across sessions
+
+Modules:
+- `rag_pipeline.vectorstore`
+- `rag_pipeline.retrieval`
+
+---
+
+#### 5. Retrieval
+- Performs nearest-neighbor search on embedded chunks
+- Configurable `top_k`
+- Returns:
+  - Relevant document chunks
+  - Similarity scores
+
+---
+
+#### 6. Generation
+- Uses locally served LLMs via **Ollama**
+- Handles prompt orchestration and response generation
+
+Module:
+- `rag_pipeline.generation.generator`
+
+---
+
+#### 7. User Interface
+- Built using **Streamlit**
+- Allows:
+  - Document ingestion
+  - Chunking configuration
+  - Model selection
+  - Querying with temperature and top-k control
+- Displays:
+  - Generated answers
+  - Retrieved chunks with similarity scores
+
+Entry point:
+- `app.py`
+
+---
+
+## Models Used
+
+### Embeddings
+- **all-MiniLM-L6-v2**
+  - From `sentence-transformers`
+  - Compact, fast, and well-suited for local RAG pipelines
+
+---
+
+### LLMs (via Ollama)
+Tested models include:
+
+- **Gemma**
+  - `gemma3:270m`
+  - `gemma3:1b`
+  - `gemma3:4b`
+- **Qwen**
+  - `qwen2.5:3b`
+- **Phi**
+  - `phi3:mini`
+  - `phi3:8b`
+- **LLaMA**
+  - `llama3.2:1b`
+  - `llama3.2:3b`
+
+> Any Ollama-supported model can be added by updating the model list in `app.py`.
+
+---
+
+### Vector Database
+- **ChromaDB**
+  - Persistent directory-based storage
+  - HNSW indexing
+  - Cosine similarity search
+
+---
+
+## Installation
+
+### 1. Clone the Repository
 ```sh
-python -m venv .venv
-.venv/Scripts/activate  # Windows
-# or
-source .venv/bin/activate  # macOS/Linux
+git clone <your-repo-url>
+cd offline-rag-bot
 
+
+### 2. Create a Virtual Environment
+#### Windows
+```sh
+py -3.11 -m venv .venv
+.venv\Scripts\activate
+
+#### macOS / Linux
+```sh
+python3.11 -m venv .venv
+source .venv/bin/activate
+
+### 3. Install Dependencies
+```sh
 pip install -r requirements.txt
-```
 
+### 4. Install Ollama
 
-## Run
-- Quick run (development):
+#### Download and install Ollama
+
+#### Pull at least one model:
 ```sh
-streamlit app.py
-```
+ollama pull gemma3:270m
+ollama pull gemma3:1b
+ollama pull gemma3:4b
 
-  0. Open CMD and run "Ollama Serve" (make sure to pull models before serving (i have used gemma3:1b and gemma3:270m)).
-  1. Documents provided in the docs folder, use them to run ingestion in the streamlit interface by selecting chunk_size and chunk_overlap.
-  2. After Ingestion, select top_k and and temperature appropriately for querying in the bar to ask question. 
+#### Running the Application
+#### 1. Start Ollama
+
+##### Open a new terminal / CMD and run:
+
+##### ollama serve
+
+####2. Run the Streamlit App
+#####In another terminal (with the virtual environment activated):
+```sh
+streamlit run app.py
+
+##### Using the App
+##### Step 1: Ingest Documents
+
+##### Place documents inside the docs/ folder
+
+#### In the Streamlit UI:
+
+##### Select document type (PDF or TXT)
+
+##### Choose chunk_size and chunk_overlap
+
+##### Click Ingest
+
+##### Embeddings are stored persistently, so ingestion does not need to be repeated every run.
+
+##### Step 2: Configure Query Settings
+
+##### Select an LLM from the dropdown
+
+##### Choose:
+
+##### top_k (number of retrieved chunks)
+
+##### temperature
+
+#####To use a new Ollama model, add it to the model list in:
+```sh
+model_name = st.sidebar.selectbox(...)
+inside app.py.
+
+#### Step 3: Ask Questions
+
+##### Type your query in the input box
+
+##### Press Enter
+
+###### The app returns:
+
+###### Generated answer
+
+###### Retrieved document chunks
+
+###### Similarity scores
+
+
+### Key Features
+
+#### Fully offline RAG pipeline
+
+#### Persistent vector database
+
+####  Multiple document ingestion options
+
+#### Configurable chunking and retrieval
+
+####  Easy LLM swapping via Ollama
+
+#### Modular and extensible codebase
 
 
 
-## References
-- Code: [app.py](app.py), [`src/rag_pipeline/ingestion/chunker.py`](src/rag_pipeline/ingestion/chunker.py), [`src/rag_pipeline/ingestion/document_loader.py`](src/rag_pipeline/ingestion/document_loader.py), [`src/rag_pipeline/embedding/embedding.py`](src/rag_pipeline/embedding/embedding.py), [`src/rag_pipeline/generation/generator.py`](src/rag_pipeline/generation/generator.py), [src/rag_pipeline/vectorstore](src/rag_pipeline/vectorstore), [src/rag_pipeline/retrieval](src/rag_pipeline/retrieval)
-- Dependencies: [requirements.txt](requirements.txt)

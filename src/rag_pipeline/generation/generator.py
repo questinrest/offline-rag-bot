@@ -1,45 +1,44 @@
-from typing import List, Dict, Any
-from langchain_ollama import OllamaLLM
+from langchain_ollama import ChatOllama
+from langchain_core.messages import SystemMessage, HumanMessage
 
 
-SYSTEM_PROMPT = """You are a documentation assistant who specializes into explaining concept topics in easy language by elaborating.
+SYSTEM_PROMPT = """You are a helpful RAG assistant.
 
-Rules:
-- Answer ONLY using the provided context.
-- If the relevant context is not present, say "I don't know".
-- Do NOT add external knowledge.
-- Write COMPLETE sentences.
-- Provide a clear definition or explanation.
-- Answer in 2–4 sentences.
+Answer the question using ONLY the provided context.
+Do NOT use any other your internal knowledge.
+
+If the context does not contain the answer, reply exactly:
+Insufficient context.
+
+Write a short, direct answer using the context.
+
+
 """
 
 
 class AnswerGenerator:
-    def __init__(self, model: str = "gemma3:270m", temperature: float = 0.1):
-        self.llm = OllamaLLM(model=model,temperature=temperature)
+    def __init__(self, model = "gemma3:4b", temperature= 0.1):
+        self.llm = ChatOllama(model=model,temperature=temperature)
 
-    def generate(self, question: str, retrieved_chunks: List[Dict[str, Any]]):
+    def generate(self, question,retrieved_chunks):
 
         context = self._build_context(retrieved_chunks)
 
-        prompt = f"""
-{SYSTEM_PROMPT}
+        user_prompt = (
+            f"Question:\n{question}\n\n"
+            f"Context:\n{context}\n\n"
+            "Return a direct answer."
 
-Context:
-{context}
+        )
 
-Question:
-{question}
+        messages = [
+            SystemMessage(content=SYSTEM_PROMPT),
+            HumanMessage(content=user_prompt),
+        ]
 
-Answer:
-"""
+        response = self.llm.invoke(messages)
 
-        response = self.llm.invoke(prompt)
-
-        if hasattr(response, "content"):
-            answer = response.content
-        else:
-            answer = str(response)
+        answer = response.content if hasattr(response, "content") else str(response)
 
         return {
             "question": question,
@@ -48,12 +47,21 @@ Answer:
         }
 
     @staticmethod
-    def _build_context(chunks: List[Dict[str, Any]]) -> str:
+    def _build_context(chunks):
         if not chunks:
             return "No relevant context found."
 
         blocks = []
-        for item in chunks[:3]:
-            blocks.append(item["content"])
+        for i, item in enumerate(chunks, start=1):
+            meta = item.get("metadata", {})
+
+            source = meta.get("file", meta.get("doc_id", "unknown"))
+            page = meta.get("page", "unknown")
+
+            blocks.append(
+                f"[chunk_id={i} | source={source} | page={page}]\n"
+                f"{item['content']}"
+            )
 
         return "\n\n".join(blocks)
+

@@ -18,11 +18,11 @@ os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
 CHROMA_DIR = "chroma_db"
 
 
-COLLECTION_NAME = "privacy_docs"
+COLLECTION_NAME = "law_b"
 
 
-st.set_page_config(page_title="RAG Legal Assistant", layout="wide")
-st.title("📄 Legal RAG Assistant (Ollama)")
+st.set_page_config(page_title="RAG BOT", layout="wide")
+st.title("Local RAG BOT (Ollama)")
 
 # ---------------------------
 # Sidebar – Ingestion controls
@@ -61,14 +61,14 @@ temperature = st.sidebar.slider("Temperature", 0.0, 1.0, 0.1)
 
 model_name = st.sidebar.selectbox(
     "Ollama model",
-    ["gemma3:270m", "gemma3:1b"],
+    ["gemma3:1b", "qwen2.5:3b", "gemma3:4b", "gemma3:270m"],
 )
 
 
 # Initialize components (cached)
 @st.cache_resource
 def load_embedder():
-    return SentenceTransformerEmbedder("all-MiniLM-L6-v2")
+    return SentenceTransformerEmbedder("all-minilm-l6-v2")
 
 
 @st.cache_resource
