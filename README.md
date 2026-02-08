@@ -35,8 +35,8 @@ The pipeline follows the standard **Retrieval-Augmented Generation (RAG)** workf
 - Converts extracted content into **LangChain `Document` objects**
 
 Relevant modules:
-- `rag_pipeline.ingestion.document_loader`
-- `rag_pipeline.ingestion.chunker`
+- `src.rag_pipeline.ingestion.document_loader`
+- `src.rag_pipeline.ingestion.chunker`
 
 ---
 
@@ -55,7 +55,7 @@ Relevant modules:
 - Embeddings are generated locally using Sentence Transformers
 
 Module:
-- `rag_pipeline.embedding.embedding`
+- `src.rag_pipeline.embedding.embedding`
 
 ---
 
@@ -63,14 +63,11 @@ Module:
 - Uses **ChromaDB**
 - Features:
   - Persistent on-disk storage (not in-memory)
-  - **HNSW indexing**
   - **Cosine similarity** search
 - Stored embeddings are reused across sessions
 
-Modules:
-- `rag_pipeline.vectorstore`
-- `rag_pipeline.retrieval`
-
+Module:
+- `src.rag_pipeline.vectorstore.chroma_store`
 ---
 
 #### 5. Retrieval
@@ -79,7 +76,8 @@ Modules:
 - Returns:
   - Relevant document chunks
   - Similarity scores
-
+Module:
+- `src.rag_pipeline.retrieval.retriever.`
 ---
 
 #### 6. Generation
@@ -87,7 +85,7 @@ Modules:
 - Handles prompt orchestration and response generation
 
 Module:
-- `rag_pipeline.generation.generator`
+- `src.rag_pipeline.generation.generator`
 
 ---
 
@@ -103,7 +101,7 @@ Module:
   - Retrieved chunks with similarity scores
 
 Entry point:
-- `app.py`
+- `app.py` (Streamlit)
 
 ---
 
@@ -127,7 +125,6 @@ Tested models include:
   - `qwen2.5:3b`
 - **Phi**
   - `phi3:mini`
-  - `phi3:8b`
 - **LLaMA**
   - `llama3.2:1b`
   - `llama3.2:3b`
