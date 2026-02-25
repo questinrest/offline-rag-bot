@@ -39,13 +39,13 @@ Built across a clean 6-stage pipeline, this project demonstrates real-world RAG 
 
 ```mermaid
 flowchart TD
-    A["Documents\n(PDF / TXT)"] --> B["Document Loader\ndocument_loader.py\nPDF page extraction · TXT reader\nSHA-256 doc_id · Law tag metadata"]
-    B --> C["Chunker\nchunker.py\nRecursiveCharacterTextSplitter\nConfigurable chunk_size & overlap"]
-    C --> D["Embedder\nembedding.py\nall-MiniLM-L6-v2\nSentence Transformers (local only)"]
-    D --> E["Vector Store\nchroma_store.py\nChromaDB · HNSW index\nCosine similarity · Persistent on-disk"]
-    E --> F["Retriever\nretriever.py\nTop-K nearest-neighbor search\nScore = 1 - cosine distance"]
-    F --> G["Generator\ngenerator.py\nOllama ChatOllama\nContext-only system prompt"]
-    G --> H["Streamlit UI\napp.py\nFile upload · Model selector\nChunk config · Answer + sources"]
+    A["Documents<br/>(PDF / TXT)"] --> B["Document Loader<br/>document_loader.py<br/>PDF page extraction · TXT reader<br/>SHA-256 doc_id · law-type auto-detection"]
+    B --> C["Chunker<br/>chunker.py<br/>RecursiveCharacterTextSplitter<br/>Configurable chunk_size and chunk_overlap"]
+    C --> D["Embedder<br/>embedding.py<br/>all-MiniLM-L6-v2<br/>SentenceTransformer, local_files_only=True"]
+    D --> E["Vector Store<br/>chroma_store.py<br/>ChromaDB, HNSW index<br/>Cosine similarity, persistent on-disk"]
+    E --> F["Retriever<br/>retriever.py<br/>Top-K nearest-neighbor search<br/>score = 1 - cosine distance"]
+    F --> G["Generator<br/>generator.py<br/>ChatOllama via langchain-ollama<br/>Context-only system prompt"]
+    G --> H["Streamlit UI<br/>app.py<br/>File upload · model selector<br/>chunk config · answer + source chunks"]
 
     style A fill:#f0f4ff,stroke:#4a6fa5
     style B fill:#e8f5e9,stroke:#388e3c
@@ -55,23 +55,6 @@ flowchart TD
     style F fill:#fce4ec,stroke:#c62828
     style G fill:#f3e5f5,stroke:#7b1fa2
     style H fill:#e3f2fd,stroke:#1565c0
-```
-
-### Component-Level Detail
-
-```
-src/rag_pipeline/
-├── ingestion/
-│   ├── document_loader.py   # PDF (pypdf) & TXT loading, SHA-256 doc_id, law-tag detection
-│   └── chunker.py           # RecursiveCharacterTextSplitter with configurable params
-├── embedding/
-│   └── embedding.py         # SentenceTransformerEmbedder (local_files_only=True)
-├── vectorstore/
-│   └── chroma_store.py      # ChromaDB client, HNSW cosine-space, persistent on-disk
-├── retrieval/
-│   └── retriever.py         # Top-K search, score normalisation (1 - cosine dist)
-└── generation/
-    └── generator.py         # ChatOllama, structured context prompt, chunk citations
 ```
 
 ---
