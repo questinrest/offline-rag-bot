@@ -1,243 +1,304 @@
-# offline-rag-bot
+# Offline RAG Bot
 
-A **lightweight, fully offline Retrieval-Augmented Generation (RAG) pipeline** for local document-based question answering and experimentation using **local embeddings, a persistent vector store, and locally served LLMs via Ollama**.
+> A **fully offline, privacy-first Retrieval-Augmented Generation (RAG)** pipeline for local document Q&A — no API keys, no data leaving your machine, no cloud dependencies.
 
-This project is designed to be **simple, modular, and hackable**, making it ideal for learning RAG internals or quickly testing different models and chunking strategies.
+[![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://python.org)
+[![Streamlit](https://img.shields.io/badge/UI-Streamlit-red?logo=streamlit)](https://streamlit.io)
+[![ChromaDB](https://img.shields.io/badge/VectorDB-ChromaDB-orange)](https://www.trychroma.com/)
+[![Ollama](https://img.shields.io/badge/LLM-Ollama-black?logo=ollama)](https://ollama.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+---
+
+## What Is This?
+
+**Offline RAG Bot** is a modular, fully self-contained question-answering system that lets you chat with your own documents — PDFs, legal texts, research papers — using **local language models** running on your hardware.
+
+Built across a clean 6-stage pipeline, this project demonstrates real-world RAG system design: from document ingestion and chunking through dense-vector retrieval to LLM-powered answer generation, all accessible through an interactive Streamlit UI.
+
+**Key demo use-case:** The included document corpus covers **four major international data privacy laws** — GDPR (EU), CCPA (California), LGPD (Brazil), and DPDP (India) — making this a practical tool for privacy compliance exploration, legal research, and education.
+
+---
+
+## Problems This Solves
+
+| Problem | How This Project Solves It |
+|---|---|
+| **Data privacy when using LLMs** | Runs 100% offline — no document ever leaves your machine |
+| **Hallucination in LLM answers** | Strict context-only system prompt: the model answers *only* from retrieved chunks |
+| **Cloud API costs & latency** | Local embeddings (Sentence Transformers) + local LLMs (Ollama) = zero API cost |
+| **Re-embedding on every run** | Persistent ChromaDB vector store — embeddings are computed once and reused |
+| **Inflexible RAG setups** | Each component is a standalone, swappable Python class |
+| **Model evaluation difficulty** | Benchmarked 5 open-source LLMs on the same 20-question legal Q&A suite |
 
 ---
 
 ## Architecture
 
-### High-Level RAG Flow
+### Pipeline Overview
 
-Documents → Loader → Chunker → Embeddings → Vector Store → Retrieval → LLM → Streamlit UI
+```mermaid
+flowchart TD
+    A["Documents\n(PDF / TXT)"] --> B["Document Loader\ndocument_loader.py\nPDF page extraction · TXT reader\nSHA-256 doc_id · Law tag metadata"]
+    B --> C["Chunker\nchunker.py\nRecursiveCharacterTextSplitter\nConfigurable chunk_size & overlap"]
+    C --> D["Embedder\nembedding.py\nall-MiniLM-L6-v2\nSentence Transformers (local only)"]
+    D --> E["Vector Store\nchroma_store.py\nChromaDB · HNSW index\nCosine similarity · Persistent on-disk"]
+    E --> F["Retriever\nretriever.py\nTop-K nearest-neighbor search\nScore = 1 - cosine distance"]
+    F --> G["Generator\ngenerator.py\nOllama ChatOllama\nContext-only system prompt"]
+    G --> H["Streamlit UI\napp.py\nFile upload · Model selector\nChunk config · Answer + sources"]
 
+    style A fill:#f0f4ff,stroke:#4a6fa5
+    style B fill:#e8f5e9,stroke:#388e3c
+    style C fill:#e8f5e9,stroke:#388e3c
+    style D fill:#fff3e0,stroke:#f57c00
+    style E fill:#fff3e0,stroke:#f57c00
+    style F fill:#fce4ec,stroke:#c62828
+    style G fill:#f3e5f5,stroke:#7b1fa2
+    style H fill:#e3f2fd,stroke:#1565c0
+```
 
-The pipeline follows the standard **Retrieval-Augmented Generation (RAG)** workflow:
+### Component-Level Detail
 
-1. Load documents (PDF / TXT)
-2. Split documents into chunks
-3. Embed chunks into vector representations
-4. Store embeddings in a persistent vector database
-5. Retrieve relevant chunks for a user query
-6. Generate an answer using an LLM with retrieved context
-
----
-
-### Components Overview
-
-#### 1. Document Ingestion
-- Custom **PDF and TXT extractors**
-- Supports:
-  - Single file
-  - Multiple files
-  - Entire folder ingestion
-- Converts extracted content into **LangChain `Document` objects**
-
-Relevant modules:
-- `src.rag_pipeline.ingestion.document_loader`
-- `src.rag_pipeline.ingestion.chunker`
-
----
-
-#### 2. Chunking Strategy
-- Uses **recursive text splitting**
-- User-configurable:
-  - `chunk_size`
-  - `chunk_overlap`
-- Chunking parameters can be selected directly from the Streamlit UI
-- Enables experimentation with different chunking combinations
-
----
-
-#### 3. Embedding Layer
-- Converts text chunks into dense vector embeddings
-- Embeddings are generated locally using Sentence Transformers
-
-Module:
-- `src.rag_pipeline.embedding.embedding`
+```
+src/rag_pipeline/
+├── ingestion/
+│   ├── document_loader.py   # PDF (pypdf) & TXT loading, SHA-256 doc_id, law-tag detection
+│   └── chunker.py           # RecursiveCharacterTextSplitter with configurable params
+├── embedding/
+│   └── embedding.py         # SentenceTransformerEmbedder (local_files_only=True)
+├── vectorstore/
+│   └── chroma_store.py      # ChromaDB client, HNSW cosine-space, persistent on-disk
+├── retrieval/
+│   └── retriever.py         # Top-K search, score normalisation (1 - cosine dist)
+└── generation/
+    └── generator.py         # ChatOllama, structured context prompt, chunk citations
+```
 
 ---
 
-#### 4. Vector Store
-- Uses **ChromaDB**
-- Features:
-  - Persistent on-disk storage (not in-memory)
-  - **Cosine similarity** search
-- Stored embeddings are reused across sessions
+## Key Features
 
-Module:
-- `src.rag_pipeline.vectorstore.chroma_store`
----
-
-#### 5. Retrieval
-- Performs nearest-neighbor search on embedded chunks
-- Configurable `top_k`
-- Returns:
-  - Relevant document chunks
-  - Similarity scores
-Module:
-- `src.rag_pipeline.retrieval.retriever.`
----
-
-#### 6. Generation
-- Uses locally served LLMs via **Ollama**
-- Handles prompt orchestration and response generation
-
-Module:
-- `src.rag_pipeline.generation.generator`
+- **Truly Offline** — `TRANSFORMERS_OFFLINE=1`, `HF_HUB_DISABLE_TELEMETRY=1`, `local_files_only=True` enforced at runtime
+- **Flexible Ingestion** — Single file, multiple files, or entire folder; PDF page-level + TXT support
+- **Smart Metadata** — Auto-detects law type (GDPR/CCPA/LGPD/DPDP) from filename; attaches doc_id, source, page
+- **Persistent Embeddings** — ChromaDB persists to `chroma_db/` directory; no re-embedding needed across sessions
+- **Fully Configurable UI** — `chunk_size`, `chunk_overlap`, `top_k`, `temperature`, model selection — all from the sidebar
+- **Source Transparency** — Every answer includes retrieved chunks, source document, page number, and cosine similarity score
+- **Multi-Model Evaluation** — Benchmarked across 5 small open-source LLMs on 20 privacy-law questions
 
 ---
 
-#### 7. User Interface
-- Built using **Streamlit**
-- Allows:
-  - Document ingestion
-  - Chunking configuration
-  - Model selection
-  - Querying with temperature and top-k control
-- Displays:
-  - Generated answers
-  - Retrieved chunks with similarity scores
+## Model Evaluation
 
-Entry point:
-- `app.py` (Streamlit)
+Five small, consumer-hardware-friendly LLMs were evaluated on a 20-question legal Q&A benchmark using the bundled privacy-law corpus:
 
----
+| Model | Size | Evaluation Output |
+|---|---|---|
+| `gemma3:270m` | ~270M params | `eval_outputs/gemma3_270m.csv` |
+| `gemma3:1b` | ~1B params | `eval_outputs/gemma3_1b.csv` |
+| `llama3.2:1b` | ~1B params | `eval_outputs/llama3_2_1b.csv` |
+| `llama3.2:3b` | ~3B params | `eval_outputs/llama3.2_3b.csv` |
+| `phi3:mini` | ~3.8B params | `eval_outputs/phi3_mini.csv` |
 
-## Models Used
+> Evaluation results are in the `eval_outputs/` directory. Each CSV contains per-question answers for manual review and comparison.
 
-### Embeddings
-- **all-MiniLM-L6-v2**
-  - From `sentence-transformers`
-  - Compact, fast, and well-suited for local RAG pipelines
+**Key finding:** Models with 1B+ parameters showed meaningful improvement in faithful citation of retrieved context over the 270M baseline, with `llama3.2:3b` and `phi3:mini` producing the most nuanced answers for complex legal queries.
 
 ---
 
-### LLMs (via Ollama)
-Tested models include:
+## Demo Corpus — Privacy Law Q&A
 
-- **Gemma**
-  - `gemma3:270m`
-  - `gemma3:1b`
-  - `gemma3:4b`
-- **Qwen**
-  - `qwen2.5:3b`
-- **Phi**
-  - `phi3:mini`
-- **LLaMA**
-  - `llama3.2:1b`
-  - `llama3.2:3b`
+The bundled `docs/` folder includes four landmark data privacy regulations:
 
-> Any Ollama-supported model can be added by updating the model list in `app.py`.
+| Document | Jurisdiction | Coverage |
+|---|---|---|
+| `GDPR-EU.pdf` | European Union | Data subject rights, controller obligations, DPO, international transfers |
+| `ccpa_california.pdf` | California, USA | Consumer rights, opt-out, CPPA governance |
+| `LGPD-english.pdf` | Brazil | 10 LGPD principles, ANPD sanctions, sensitive data processing |
+| `dpdp.pdf` | India | Data Principal rights, Data Fiduciary obligations, grievance mechanisms |
 
----
-
-### Vector Database
-- **ChromaDB**
-  - Persistent directory-based storage
-  - HNSW indexing
-  - Cosine similarity search
+**Example questions the system answers accurately:**
+- *"What is the right to erasure under GDPR?"*
+- *"What fines can the ANPD impose under LGPD?"*
+- *"How does CCPA define the right to delete personal information?"*
 
 ---
 
-# Offline RAG Bot
+## Tech Stack
 
-An offline Retrieval-Augmented Generation (RAG) chatbot built with **Streamlit** and **Ollama**, supporting persistent embeddings and multiple document formats.
+| Layer | Technology | Role |
+|---|---|---|
+| **UI** | Streamlit | Interactive frontend |
+| **Document Parsing** | pypdf, Python stdlib | PDF extraction, TXT reading |
+| **Text Splitting** | LangChain `RecursiveCharacterTextSplitter` | Intelligent chunking |
+| **Embeddings** | `sentence-transformers` (all-MiniLM-L6-v2) | Dense vector representations |
+| **Vector Database** | ChromaDB (HNSW, cosine) | Persistent similarity search |
+| **LLM Runtime** | Ollama | Local LLM serving |
+| **LLM Integration** | `langchain-ollama` | Chat abstraction layer |
+| **Core Abstraction** | LangChain, LangChain-Community | Document and chain primitives |
 
 ---
 
-## How to Run?
+## How to Run
+
+### Prerequisites
+
+- Python 3.11
+- [Ollama](https://ollama.com) installed on your system
 
 ### 1. Clone the Repository
 
-```sh
+```bash
 git clone https://github.com/questinrest/offline-rag-bot.git
 cd offline-rag-bot
 ```
 
-### 2. Create and Activate enviroment
+### 2. Create and Activate Virtual Environment
 
-Windows
-```sh
+**Windows:**
+```bash
 py -3.11 -m venv .venv
 .venv\Scripts\activate
 ```
 
-macOS / Linux
-```sh
+**macOS / Linux:**
+```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
 ```
 
 ### 3. Install Dependencies
-```sh
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 4. Install Ollama
+### 4. Download Sentence Transformer Model (one-time)
 
-Download and install Ollama
-https://ollama.com
+The embedder uses `all-MiniLM-L6-v2` in offline mode. Download it once:
+```python
+from sentence_transformers import SentenceTransformer
+SentenceTransformer("all-MiniLM-L6-v2")
+```
+> After the first download, the project enforces `local_files_only=True` — no network calls ever.
 
-```sh
-Pull at least one model:
-ollama pull gemma3:270m
+### 5. Pull an Ollama Model
+
+```bash
+# Recommended starting models (fast, CPU-friendly)
 ollama pull gemma3:1b
+ollama pull gemma3:270m
+
+# Optional: larger models for better quality
 ollama pull gemma3:4b
+ollama pull llama3.2:3b
+ollama pull phi3:mini
 ```
 
-### Running the Application
-#### 1. Start Ollama
-Open a new terminal / CMD and run:
-```sh
+### 6. Start Ollama Server
+
+In a separate terminal:
+```bash
 ollama serve
 ```
 
-#### 2. Run the Streamlit App
-In another terminal (with the virtual environment activated):
-```sh
+### 7. Run the Streamlit App
+
+In your project terminal (with venv activated):
+```bash
 streamlit run app.py
 ```
 
-### Using the App
+The app opens at `http://localhost:8501`.
 
-#### Step 1: Ingest Documents
-Place documents inside the docs/ folder
+---
 
-In the Streamlit UI:
+## Using the App
 
-Select document type (PDF or TXT)
+### Step 1 — Ingest Documents
 
-Choose chunk_size and chunk_overlap
+1. Place your PDFs/TXTs in the `docs/` folder, **or** upload them directly via the sidebar
+2. Set `chunk_size` (recommended: 250–400) and `chunk_overlap` (recommended: 40–80)
+3. Click **Run Ingestion**
 
-Click Ingest
+> Embeddings persist to `chroma_db/` — you only need to ingest once per document set.
 
-Embeddings are stored persistently, so ingestion does not need to be repeated every run.
+### Step 2 — Configure Retrieval & Model
 
-#### Step 2: Configure Query Settings
-Select an LLM from the dropdown
+From the sidebar:
+- **Ollama model** — Select any pulled model
+- **Top K** — Number of chunks to retrieve (1–12)
+- **Temperature** — Response creativity (0.0 = deterministic, 1.0 = creative)
 
-Configure:
+### Step 3 — Ask Questions
 
-top_k (number of retrieved chunks)
+Type your question in the main input. The app returns:
+- The generated answer (grounded strictly in your documents)
+- Retrieved context chunks with source file, page number, and similarity score
 
-temperature
+---
 
-To use a new Ollama model, add it to the model list in app.py:
-```sh
-model_name = st.sidebar.selectbox(...)
+## Future Improvements
+
+| Feature | Description |
+|---|---|
+| **Metadata Filtering** | Filter retrieval by law type, jurisdiction, or document section before vector search |
+| **Re-ranking Layer** | Add a cross-encoder re-ranker (e.g., `ms-marco-MiniLM`) between retrieval and generation to boost precision |
+| **Evaluation Harness** | Automated RAGAS / LLM-as-judge scoring for faithfulness, answer relevancy, and context precision |
+| **HyDE (Hypothetical Document Embeddings)** | Generate a hypothetical answer first, embed it, then retrieve — improves recall for complex queries |
+| **Multi-collection Support** | Let users create and switch between named ChromaDB collections from the UI |
+| **Citation Highlighting** | Highlight the exact sentence in retrieved chunks that supports the answer |
+| **Streaming Output** | Stream LLM tokens to the UI in real-time for a better UX on larger models |
+| **Docker / Compose Setup** | Package Ollama + app in a single `docker-compose.yml` for one-command deployment |
+| **REST API Layer** | FastAPI wrapper around the pipeline for headless / programmatic use |
+
+---
+
+## Project Structure
+
+```
+offline-rag-bot/
+├── app.py                          # Streamlit entry point
+├── requirements.txt                # Python dependencies
+├── docs/                           # Sample document corpus (privacy laws)
+│   ├── GDPR-EU.pdf
+│   ├── ccpa_california.pdf
+│   ├── LGPD-english.pdf
+│   └── dpdp.pdf
+├── eval_outputs/                   # LLM benchmark results (CSV)
+│   ├── gemma3_270m.csv
+│   ├── gemma3_1b.csv
+│   ├── llama3_2_1b.csv
+│   ├── llama3.2_3b.csv
+│   └── phi3_mini.csv
+├── notebooks/
+│   ├── experiments.ipynb           # RAG experimentation and tuning
+│   └── structure.ipynb             # Pipeline structure exploration
+└── src/
+    └── rag_pipeline/
+        ├── ingestion/
+        │   ├── document_loader.py  # PDF/TXT loading + metadata enrichment
+        │   └── chunker.py          # Recursive text splitting
+        ├── embedding/
+        │   └── embedding.py        # SentenceTransformer wrapper
+        ├── vectorstore/
+        │   └── chroma_store.py     # ChromaDB abstraction
+        ├── retrieval/
+        │   └── retriever.py        # Similarity search + score formatting
+        └── generation/
+            └── generator.py        # Ollama LLM + prompt orchestration
 ```
 
-#### Step 3: Ask Questions
-Type your query in the input box
+---
 
-Press Enter
+## License
 
-The app returns:
+[MIT](LICENSE) — free to use, modify, and distribute.
 
-Generated answer
+---
 
-Retrieved document chunks
+<div align="center">
 
-Similarity scores
+Built for privacy, modularity, and local-first AI.
+
+</div>
